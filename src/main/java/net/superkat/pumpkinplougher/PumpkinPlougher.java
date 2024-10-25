@@ -1,5 +1,10 @@
 package net.superkat.pumpkinplougher;
 
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.*;
+import net.neoforged.neoforge.event.EventHooks;
+import net.neoforged.neoforge.event.entity.living.LivingEntityUseItemEvent;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -9,10 +14,6 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.food.FoodProperties;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.CreativeModeTabs;
-import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -86,6 +87,7 @@ public class PumpkinPlougher {
         // Note that this is necessary if and only if we want *this* class (ExampleMod) to respond directly to events.
         // Do not add this line if there are no @SubscribeEvent-annotated functions in this class, like onServerStarting() below.
         NeoForge.EVENT_BUS.register(this);
+        NeoForge.EVENT_BUS.addListener(false, this::pumpkinPlougherItemTick);
 
         // Register the item to a creative tab
 //        modEventBus.addListener(this::addCreative);
@@ -120,6 +122,16 @@ public class PumpkinPlougher {
     {
         // Do something when the server starts
         LOGGER.info("HELLO from server starting");
+    }
+
+    @SubscribeEvent
+    public void pumpkinPlougherItemTick(LivingEntityUseItemEvent.Tick event) {
+        if(event.getEntity() instanceof Player player) {
+            ItemStack useItemStack = event.getItem();
+            if(useItemStack.getItem() instanceof PumpkinPlougherItem pumpkinPlougherItem) {
+                pumpkinPlougherItem.tickUse(player);
+            }
+        }
     }
 
     // You can use EventBusSubscriber to automatically register all static methods in the class annotated with @SubscribeEvent

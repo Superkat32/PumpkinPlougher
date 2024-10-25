@@ -3,16 +3,23 @@ package net.superkat.pumpkinplougher;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.ai.targeting.TargetingConditions;
+import net.minecraft.world.entity.decoration.ArmorStand;
+import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemDisplayContext;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.ItemUtils;
+import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 import software.bernie.geckolib.animatable.GeoItem;
@@ -35,10 +42,77 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
     public static final RawAnimation PLOUGH_FIRST_PERSON_ANIM = RawAnimation.begin().thenLoop("animation.pumpkinplougher.ploughfirstperson");
     private final AnimatableInstanceCache geoCache = GeckoLibUtil.createInstanceCache(this);
 
+    public static final int USE_DURATION = 1200;
+
     public PumpkinPlougherItem() {
         super(new Item.Properties().stacksTo(1));
 
         SingletonGeoAnimatable.registerSyncedAnimatable(this);
+    }
+
+    public void tickUse(Player player) {
+        if(player.level().isClientSide) {
+            Vec3 playerVel = player.getDeltaMovement();
+            int playerVelSqr = (int) (Math.ceil(playerVel.x * playerVel.x) + Math.ceil(playerVel.z * playerVel.z));
+            int time = (int) player.level().getDayTime();
+
+            int particleTime = 15 - (playerVelSqr * 5);
+
+            if(particleTime > 0 && time % particleTime == 0) {
+                Vec3 handPos = player.getHandHoldingItemAngle(Items.FIREWORK_ROCKET);
+                player.level().addParticle(ParticleTypes.SCULK_SOUL, player.getX() + handPos.x, player.getY() + 0.25, player.getZ() + handPos.z, -playerVel.x, 0.35, -playerVel.y);
+            }
+
+//            if(playerVelSqr == 1) {
+//                player.level().addParticle(ParticleTypes.SONIC_BOOM, player.getX(), player.getEyeY(), player.getZ(), playerVel.x / 2, playerVel.y / 2, playerVel.z / 2);
+//                player.playSound(SoundEvents.WARDEN_SONIC_CHARGE, 1, 1.7f);
+//            }
+        } else {
+            Vec3 playerVel = player.getKnownMovement();
+            if(player instanceof ServerPlayer serverPlayer) {
+                PumpkinPlougherPlayer pumpkinPlougherPlayer = (PumpkinPlougherPlayer) serverPlayer;
+                Vec3 previousDeltaMovement = pumpkinPlougherPlayer.pumpkinplougher$previousDeltaMovement();
+                pumpkinPlougherPlayer.pumpkinplougher$setPreviousDeltaMovement(playerVel);
+                int boomTicks = pumpkinPlougherPlayer.pumpkinplougher$getBoomTicks();
+                pumpkinPlougherPlayer.pumpkinplougher$setBoomTicks(boomTicks + 1);
+
+                double speedDifference = playerVel.length() - previousDeltaMovement.length();
+
+                if((boomTicks >= 40 && speedDifference >= 0.2) || boomTicks >= 300) {
+                    showSonicBoom(serverPlayer);
+                    pumpkinPlougherPlayer.pumpkinplougher$setBoomTicks(0);
+                }
+
+            }
+
+            player.level().getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(1.5), entity -> {
+                boolean notSpectator = !entity.isSpectator();
+                boolean notAllied = !player.isAlliedTo(entity);
+                boolean notArmorStand = !(entity instanceof ArmorStand);
+                boolean notAttacker = entity != player;
+//                boolean distance = entity.distanceToSqr(player) <= Math.pow(3.5, 2.0);
+                return notSpectator && notAllied && notArmorStand && notAttacker;
+            }).forEach(entity -> {
+                entity.knockback(Math.abs(playerVel.length() * 3), -playerVel.x, -playerVel.z);
+                float damage = (float) (playerVel.length() * 7);
+                if((entity instanceof Monster && entity.isInvertedHealAndHarm()) || entity.getItemBySlot(EquipmentSlot.HEAD).is(Items.CARVED_PUMPKIN)) {
+                    damage *= 50f;
+                }
+                boolean entityWasHurt = entity.hurt(player.damageSources().playerAttack(player), damage);
+                if(entityWasHurt && entity.isDeadOrDying()) {
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.TRIDENT_THUNDER, SoundSource.PLAYERS, 1f, 1.7f);
+                    ((ServerLevel)player.level()).sendParticles(ParticleTypes.SCULK_SOUL, entity.getX(), entity.getEyeY(), entity.getZ(), 3, 0, 0, 0, 0.1);
+                    ((ServerLevel)player.level()).sendParticles(ParticleTypes.SOUL_FIRE_FLAME, entity.getX(), entity.getEyeY(), entity.getZ(), 7, 0, 0, 0, 0.35);
+                    ((ServerLevel)player.level()).sendParticles(ParticleTypes.TRIAL_SPAWNER_DETECTED_PLAYER_OMINOUS, entity.getX(), entity.getEyeY(), entity.getZ(), 7, 0, 0, 0, 0.1);
+                }
+            });
+        }
+    }
+
+    private void showSonicBoom(ServerPlayer player) {
+        player.serverLevel().sendParticles(ParticleTypes.SONIC_BOOM, player.getX(), player.getEyeY(), player.getZ(), 1, 0, 0, 0, 0);
+        player.serverLevel().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 1, 1.7f);
+        player.serverLevel().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2, 0.8f);
     }
 
     @Override
@@ -46,6 +120,7 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
         if(level instanceof ServerLevel serverLevel) {
             triggerAnim(player, GeoItem.getOrAssignId(player.getItemInHand(hand), serverLevel), "controller", "plough");
         }
+        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, USE_DURATION, 99, false, false, false), player);
         return ItemUtils.startUsingInstantly(level, player, hand);
     }
 
@@ -54,12 +129,14 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
         if(level instanceof ServerLevel serverLevel && livingEntity instanceof Player player) {
             triggerAnim(player, GeoItem.getOrAssignId(stack, serverLevel), "controller", "idle");
         }
+        //likely causes bug by removing a potion speed but whatever
+        livingEntity.removeEffect(MobEffects.MOVEMENT_SPEED);
         super.releaseUsing(stack, level, livingEntity, timeCharged);
     }
 
     @Override
     public int getUseDuration(ItemStack stack, LivingEntity entity) {
-        return 1200;
+        return USE_DURATION;
     }
 
     @Override
@@ -81,7 +158,7 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
             }).setParticleKeyframeHandler(event -> {
                 Player player = ClientUtil.getClientPlayer();
                 if(player != null) {
-                    player.level().addParticle(ParticleTypes.SMOKE, player.getX(), player.getY(), player.getZ(), 0, 0.1, 0);
+                    player.level().addParticle(ParticleTypes.LARGE_SMOKE, player.getX(), player.getY(), player.getZ(), 0, 0.1, 0);
                 }
             }).triggerableAnim("plough_first", PLOUGH_FIRST_PERSON_ANIM).triggerableAnim("idle", IDLE_ANIM)
         );
