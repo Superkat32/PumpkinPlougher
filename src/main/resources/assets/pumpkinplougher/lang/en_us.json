@@ -1,5 +1,5 @@
 {
-  "itemGroup.examplemod": "Example Mod Tab",
-  "block.examplemod.example_block": "Example Block",
-  "item.examplemod.example_item": "Example Item"
+  "itemGroup.pumpkinplougher": "Pumpkin Plougher Group",
+  "item.pumpkinplougher.pumpkinplougher": "Pumpkin Plougher",
+  "gamerule.ploughablePumpkins": "Ploughable Pumpkins with Pumpkin Plougher"
 }

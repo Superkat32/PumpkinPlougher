@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "H": {
+      "item": "minecraft:netherite_hoe"
+    },
+    "C": {
+      "item": "minecraft:sculk_catalyst"
+    },
+    "N": {
+      "item": "minecraft:netherite_block"
+    },
+    "P": {
+      "item": "minecraft:carved_pumpkin"
+    },
+    "S": {
+      "item": "minecraft:sculk"
+    },
+    "A": {
+      "item": "minecraft:chain"
+    }
+  },
+  "pattern": [
+    "C  ",
+    "SHN",
+    "SAP"
+  ],
+  "result": {
+    "count": 1,
+    "id": "pumpkinplougher:pumpkinplougher"
+  }
+}

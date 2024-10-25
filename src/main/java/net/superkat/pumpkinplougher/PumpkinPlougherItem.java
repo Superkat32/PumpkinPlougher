@@ -1,6 +1,7 @@
 package net.superkat.pumpkinplougher;
 
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -19,6 +20,8 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -35,6 +38,7 @@ import software.bernie.geckolib.util.ClientUtil;
 import software.bernie.geckolib.util.GeckoLibUtil;
 
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public class PumpkinPlougherItem extends Item implements GeoItem {
     public static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("animation.pumpkinplougher.idle");
@@ -61,12 +65,11 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
             if(particleTime > 0 && time % particleTime == 0) {
                 Vec3 handPos = player.getHandHoldingItemAngle(Items.FIREWORK_ROCKET);
                 player.level().addParticle(ParticleTypes.SCULK_SOUL, player.getX() + handPos.x, player.getY() + 0.25, player.getZ() + handPos.z, -playerVel.x, 0.35, -playerVel.y);
+                if(player.getRandom().nextInt(10) == 0) {
+                    player.level().addParticle(ParticleTypes.LAVA, player.getX() + handPos.x, player.getY() + 0.55, player.getZ() + handPos.z, -playerVel.x, 1.35, -playerVel.y);
+                    player.playSound(SoundEvents.LAVA_EXTINGUISH, 0.3f, 1.3f);
+                }
             }
-
-//            if(playerVelSqr == 1) {
-//                player.level().addParticle(ParticleTypes.SONIC_BOOM, player.getX(), player.getEyeY(), player.getZ(), playerVel.x / 2, playerVel.y / 2, playerVel.z / 2);
-//                player.playSound(SoundEvents.WARDEN_SONIC_CHARGE, 1, 1.7f);
-//            }
         } else {
             Vec3 playerVel = player.getKnownMovement();
             if(player instanceof ServerPlayer serverPlayer) {
@@ -106,6 +109,23 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
                     ((ServerLevel)player.level()).sendParticles(ParticleTypes.TRIAL_SPAWNER_DETECTED_PLAYER_OMINOUS, entity.getX(), entity.getEyeY(), entity.getZ(), 7, 0, 0, 0, 0.1);
                 }
             });
+
+            if(player.level().getGameRules().getBoolean(PumpkinPlougher.PLOUGHABLE_PUMPKINS)) {
+                int searchX = 2;
+                int searchZ = 2;
+                BlockPos searchPos = player.getOnPos();
+                for (int x = -searchX; x < searchX; x++) {
+                    for (int z = -searchZ; z < searchZ; z++) {
+                        searchPos = player.blockPosition().offset(x, 0, z);
+                        BlockState blockState = player.level().getBlockState(searchPos);
+                        //find pumpkin
+                        if(blockState.is(Blocks.PUMPKIN)) {
+                            player.level().destroyBlock(searchPos, true, player);
+                        }
+                    }
+                }
+            }
+
         }
     }
 
@@ -154,6 +174,10 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
                 Player player = ClientUtil.getClientPlayer();
                 if(player != null) {
                     player.playSound(SoundEvents.MINECART_RIDING, 0.1f, 1.7f);
+                    if(player.getRandom().nextInt(5) == 0) {
+                        player.playSound(SoundEvents.CHAIN_STEP, 0.5f, 0.8f);
+                        player.level().addParticle(ParticleTypes.DUST_PLUME, player.getX(), player.getY(), player.getZ(), 0, 0.1, 0);
+                    }
                 }
             }).setParticleKeyframeHandler(event -> {
                 Player player = ClientUtil.getClientPlayer();
