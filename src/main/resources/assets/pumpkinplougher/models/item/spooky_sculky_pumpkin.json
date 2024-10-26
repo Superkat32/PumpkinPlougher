@@ -1,0 +1,6 @@
+{
+  "parent": "minecraft:item/generated",
+  "textures": {
+    "layer0": "pumpkinplougher:item/spooky_sculky_pumpkin"
+  }
+}

@@ -1,5 +1,16 @@
 {
   "itemGroup.pumpkinplougher": "Pumpkin Plougher Group",
   "item.pumpkinplougher.pumpkinplougher": "Pumpkin Plougher",
-  "gamerule.ploughablePumpkins": "Ploughable Pumpkins with Pumpkin Plougher"
+  "item.pumpkinplougher.spooky_pumpkin": "Spooky Pumpkin",
+  "item.pumpkinplougher.spooky_sculky_pumpkin": "Spooky Sculky Pumpkin",
+  "gamerule.ploughablePumpkins": "Ploughable Pumpkins with Pumpkin Plougher",
+  "gamerule.ploughablePlayers": "Ploughable Players with Pumpkin Plougher",
+  "gamerule.pumpkinMinigameEnabled": "Raise of The Pumpkins Minigame Enabled",
+
+  "raiseofthepumpkins.minigamedisabled": "Raise of The Pumpkins has been disabled. Sorry!",
+  "raiseofthepumpkins.title": "Raise of The Pumpkins",
+  "raiseofthepumpkins.hud": "%1$s - %2$s - %3$s",
+  "raiseofthepumpkins.danger": "%1$s (!!!)",
+  "raiseofthepumpkins.victory": "Victory!",
+  "raiseofthepumpkins.defeat": "That's a wrap!"
 }

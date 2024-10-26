@@ -9,12 +9,10 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.player.Player;
@@ -23,22 +21,17 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
-import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3d;
 import software.bernie.geckolib.animatable.GeoItem;
 import software.bernie.geckolib.animatable.SingletonGeoAnimatable;
 import software.bernie.geckolib.animatable.client.GeoRenderProvider;
 import software.bernie.geckolib.animatable.instance.AnimatableInstanceCache;
 import software.bernie.geckolib.animation.AnimatableManager;
 import software.bernie.geckolib.animation.AnimationController;
-import software.bernie.geckolib.animation.PlayState;
 import software.bernie.geckolib.animation.RawAnimation;
 import software.bernie.geckolib.constant.DataTickets;
 import software.bernie.geckolib.util.ClientUtil;
 import software.bernie.geckolib.util.GeckoLibUtil;
-
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 public class PumpkinPlougherItem extends Item implements GeoItem {
     public static final RawAnimation IDLE_ANIM = RawAnimation.begin().thenLoop("animation.pumpkinplougher.idle");
@@ -94,7 +87,8 @@ public class PumpkinPlougherItem extends Item implements GeoItem {
                 boolean notArmorStand = !(entity instanceof ArmorStand);
                 boolean notAttacker = entity != player;
 //                boolean distance = entity.distanceToSqr(player) <= Math.pow(3.5, 2.0);
-                return notSpectator && notAllied && notArmorStand && notAttacker;
+                boolean ploughablePlayer = player.level().getGameRules().getBoolean(PumpkinPlougher.PLOUGHABLE_PLAYERS) || !(entity instanceof Player);
+                return notSpectator && notAllied && notArmorStand && notAttacker && ploughablePlayer;
             }).forEach(entity -> {
                 entity.knockback(Math.abs(playerVel.length() * 3), -playerVel.x, -playerVel.z);
                 float damage = (float) (playerVel.length() * 7);
